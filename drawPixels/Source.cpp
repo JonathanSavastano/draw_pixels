@@ -79,6 +79,25 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 	{
 		ws_cpy[c] = 0x0000aaff; // aRGB (alpha RGB) in hexadecimal format
 	}
+
+	// TRYING TO PUT IN A LINE IN THE MIDDLE OF SCREEN
+	int line_width = 50;
+	int line_height = 400;
+
+	// calculate starting position
+	int start_x = (screenw / 2) - (line_width / 2);
+	int start_y = (screenh / 2) - (line_height / 2);
+
+	// draw the line
+	for (int y = 0; y < line_height; y++)
+	{
+		for (int x = 0; x < line_width; x++)
+		{
+			int pixel_index = (start_y + y) * screenw + (start_x + x);
+			ws_cpy[pixel_index] = 0xffff0000; // bright red in aRGB
+		}
+	}
+
 }
 
 void Prepare_Screen(HWND hwnd)

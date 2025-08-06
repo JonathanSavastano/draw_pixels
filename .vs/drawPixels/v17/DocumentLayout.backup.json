@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\33150\\source\\repos\\drawPixels\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{5A745A96-116F-489A-A7A2-6F44C9939A4E}|drawPixels\\drawPixels.vcxproj|C:\\Users\\33150\\source\\repos\\drawPixels\\drawPixels\\Source.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{5A745A96-116F-489A-A7A2-6F44C9939A4E}|drawPixels\\drawPixels.vcxproj|solutionrelative:drawPixels\\Source.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Source.cpp",
+              "DocumentMoniker": "C:\\Users\\33150\\source\\repos\\drawPixels\\drawPixels\\Source.cpp",
+              "RelativeDocumentMoniker": "drawPixels\\Source.cpp",
+              "ToolTip": "C:\\Users\\33150\\source\\repos\\drawPixels\\drawPixels\\Source.cpp",
+              "RelativeToolTip": "drawPixels\\Source.cpp",
+              "ViewState": "AgIAAFQAAAAAAAAAAAAAAGgAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-08-06T13:03:03.46Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

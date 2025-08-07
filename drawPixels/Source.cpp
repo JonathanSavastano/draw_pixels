@@ -32,6 +32,15 @@ PAINTSTRUCT ps;
 int screenw = GetSystemMetrics(SM_CXSCREEN);
 int screenh = GetSystemMetrics(SM_CYSCREEN);
 
+// global variables to help with dragging shapes
+bool isDragging = false;
+POINT dragStart = { 0, 0 };
+
+int line_width = 50;
+int line_height = 400;
+int start_x = (screenw / 2) - (line_width / 2);
+int start_y = (screenh / 2) - (line_height / 2);
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, int Width, int Height)
@@ -80,21 +89,16 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 		ws_cpy[c] = 0x0000aaff; // aRGB (alpha RGB) in hexadecimal format
 	}
 
-	// TRYING TO PUT IN A LINE IN THE MIDDLE OF SCREEN
-	int line_width = 50;
-	int line_height = 400;
-
-	// calculate starting position
-	int start_x = (screenw / 2) - (line_width / 2);
-	int start_y = (screenh / 2) - (line_height / 2);
-
 	// draw the line
 	for (int y = 0; y < line_height; y++)
 	{
 		for (int x = 0; x < line_width; x++)
 		{
 			int pixel_index = (start_y + y) * screenw + (start_x + x);
-			ws_cpy[pixel_index] = 0xffff0000; // bright red in aRGB
+			if (pixel_index >= 0 && pixel_index < MapSize)
+			{
+				ws_cpy[pixel_index] = 0xffff0000; // bright red in aRGB
+			}
 		}
 	}
 
@@ -158,9 +162,54 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	BitBlt(BeginPaint(hwnd, &ps), 0, 0, screenw, screenh, hdc_comp, 0, 0, SRCCOPY); // fist magic num pair represents coords inside window
-	EndPaint(hwnd, &ps);
+	switch (uMsg)
+	{
+	case WM_PAINT:
+		hdc_main = BeginPaint(hwnd, &ps);
+		BitBlt(hdc_main, 0, 0, screenw, screenh, hdc_comp, 0, 0, SRCCOPY);
+		EndPaint(hwnd, &ps);
+		return 0;
 
-	RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+	case WM_LBUTTONDOWN:
+	{
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+
+		// check if mouse is within the red line bounds
+		if (mouseX >= start_x && mouseX <= start_x + line_width &&
+			mouseY >= start_y && mouseY <= start_y + line_height)
+		{
+			isDragging = true;
+			SetCapture(hwnd);
+		}
+		return 0;
+	}
+		
+
+	case WM_MOUSEMOVE:
+		if (isDragging)
+		{
+			int mouseX = LOWORD(lParam);
+			int mouseY = HIWORD(lParam);
+
+			start_x = mouseX - (line_width / 2);
+			start_y = mouseY - (line_height / 2);
+
+			MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
+			SelectObject(hdc_comp, whole_screen);
+			InvalidateRect(hwnd, NULL, FALSE);
+		}
+		return 0;
+
+	case WM_LBUTTONUP:
+		isDragging = false;
+		ReleaseCapture();
+		return 0;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

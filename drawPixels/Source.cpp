@@ -38,8 +38,15 @@ POINT dragStart = { 0, 0 };
 
 int line_width = 50;
 int line_height = 400;
-int start_x = (screenw / 2) - (line_width / 2);
-int start_y = (screenh / 2) - (line_height / 2);
+
+int line1_x = (screenw / 2) - (line_width / 2);
+int line1_y = (screenh / 2) - (line_height / 2);
+bool line1_drag = false;
+
+int line2_x = (screenw / 3) - (line_width / 2);
+int line2_y = (screenh / 3) - (line_height / 2);
+bool line2_drag = false;
+
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -89,12 +96,25 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 		ws_cpy[c] = 0x0000aaff; // aRGB (alpha RGB) in hexadecimal format
 	}
 
-	// draw the line
+	// draw the line1
 	for (int y = 0; y < line_height; y++)
 	{
 		for (int x = 0; x < line_width; x++)
 		{
-			int pixel_index = (start_y + y) * screenw + (start_x + x);
+			int pixel_index = (line1_y + y) * screenw + (line1_x + x);
+			if (pixel_index >= 0 && pixel_index < MapSize)
+			{
+				ws_cpy[pixel_index] = 0xffff0000; // bright red in aRGB
+			}
+		}
+	}
+
+	// draw the line2
+	for (int y = 0; y < line_height; y++)
+	{
+		for (int x = 0; x < line_width; x++)
+		{
+			int pixel_index = (line2_y + y) * screenw + (line2_x + x);
 			if (pixel_index >= 0 && pixel_index < MapSize)
 			{
 				ws_cpy[pixel_index] = 0xffff0000; // bright red in aRGB
@@ -176,10 +196,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		int mouseY = HIWORD(lParam);
 
 		// check if mouse is within the red line bounds
-		if (mouseX >= start_x && mouseX <= start_x + line_width &&
-			mouseY >= start_y && mouseY <= start_y + line_height)
+		if (mouseX >= line1_x && mouseX <= line1_x + line_width &&
+			mouseY >= line1_y && mouseY <= line1_y + line_height)
 		{
 			isDragging = true;
+			line1_drag = true;
+			SetCapture(hwnd);
+		}
+		else if (mouseX >= line2_x && mouseX <= line2_x + line_width &&
+			mouseY >= line2_y && mouseY <= line2_y + line_height)
+		{
+			isDragging = true;
+			line2_drag = true;
 			SetCapture(hwnd);
 		}
 		return 0;
@@ -187,13 +215,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 
 	case WM_MOUSEMOVE:
-		if (isDragging)
+		if (isDragging && line1_drag)
 		{
 			int mouseX = LOWORD(lParam);
 			int mouseY = HIWORD(lParam);
 
-			start_x = mouseX - (line_width / 2);
-			start_y = mouseY - (line_height / 2);
+			line1_x = mouseX - (line_width / 2);
+			line1_y = mouseY - (line_height / 2);
+
+			MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
+			SelectObject(hdc_comp, whole_screen);
+			InvalidateRect(hwnd, NULL, FALSE);
+		}
+		else if (isDragging && line2_drag)
+		{
+			int mouseX = LOWORD(lParam);
+			int mouseY = HIWORD(lParam);
+
+			line2_x = mouseX - (line_width / 2);
+			line2_y = mouseY - (line_height / 2);
 
 			MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
 			SelectObject(hdc_comp, whole_screen);
@@ -203,6 +243,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONUP:
 		isDragging = false;
+		line1_drag = false;
+		line2_drag = false;
 		ReleaseCapture();
 		return 0;
 

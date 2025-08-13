@@ -29,6 +29,8 @@ BITMAPINFO bmi; // a data struct holding info necessary to create a bitmap
 // Windows requires this paintstruct to draw anything
 PAINTSTRUCT ps;
 
+HBITMAP dummy_bitmap;
+
 int screenw = GetSystemMetrics(SM_CXSCREEN);
 int screenh = GetSystemMetrics(SM_CYSCREEN);
 
@@ -52,12 +54,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, int Width, int Height)
 {
+	// get DC once only
+	HDC hdc = GetDC(hwnd);
+
 	// Create the bitmap info header
 	Bmi.bmiHeader.biSize = sizeof(Bmi.bmiHeader);
 	Bmi.bmiHeader.biWidth = Width;
 	Bmi.bmiHeader.biHeight = -Height;
 	Bmi.bmiHeader.biPlanes = 1;
-	Bmi.bmiHeader.biBitCount = GetDeviceCaps(GetDC(hwnd), BITSPIXEL);
+	Bmi.bmiHeader.biBitCount = GetDeviceCaps(hdc, BITSPIXEL);
 	Bmi.bmiHeader.biCompression = BI_RGB;
 	Bmi.bmiHeader.biSizeImage = 0;
 	Bmi.bmiHeader.biXPelsPerMeter = 0;
@@ -68,7 +73,7 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 	// DIB = Device Independent Bitmap, a bitmap we can use regardless of device
 	*Bitmap = CreateDIBSection
 	(
-		GetDC(hwnd),
+		hdc,
 		&Bmi,
 		DIB_RGB_COLORS,
 		(void**)window_p,
@@ -79,7 +84,7 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 	// Get a handle (pointer) to the bits of the bitmap
 	GetDIBits
 	(
-		GetDC(hwnd),
+		hdc,
 		*Bitmap,
 		0,
 		Height,
@@ -87,6 +92,8 @@ void MakeBitMap(HWND hwnd, HBITMAP* Bitmap, BITMAPINFO Bmi, DWORD** window_p, in
 		&Bmi,
 		DIB_RGB_COLORS
 	);
+
+	ReleaseDC(hwnd, hdc); // release DC when we are done with it.
 
 	// Write some color value to the buffer
 	DWORD* ws_cpy = *window_p; // creates a local copy of our bitmap pointer
@@ -129,6 +136,7 @@ void Prepare_Screen(HWND hwnd)
 	MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
 	hdc_main = GetDC(hwnd);
 	hdc_comp = CreateCompatibleDC(hdc_main);
+	dummy_bitmap = CreateBitmap(1, 1, 1, 1, NULL); 
 	SelectObject(hdc_comp, whole_screen);
 }
 
@@ -215,28 +223,36 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 
 	case WM_MOUSEMOVE:
-		if (isDragging && line1_drag)
+		if ((isDragging && line1_drag) || (isDragging && line2_drag))
 		{
 			int mouseX = LOWORD(lParam);
 			int mouseY = HIWORD(lParam);
 
-			line1_x = mouseX - (line_width / 2);
-			line1_y = mouseY - (line_height / 2);
+			if (line1_drag) {
+				line1_x = mouseX - (line_width / 2);
+				line1_y = mouseY - (line_height / 2);
+			} else if (line2_drag) {
+				line2_x = mouseX - (line_width / 2);
+				line2_y = mouseY - (line_height / 2);
+			}
 
-			MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
-			SelectObject(hdc_comp, whole_screen);
-			InvalidateRect(hwnd, NULL, FALSE);
-		}
-		else if (isDragging && line2_drag)
-		{
-			int mouseX = LOWORD(lParam);
-			int mouseY = HIWORD(lParam);
+			// Clear the bitmap buffer (set background color)
+			int MapSize = screenw * screenh;
+			for (int c = 0; c < MapSize; c++)
+				window_bmp_p[c] = 0x0000aaff;
 
-			line2_x = mouseX - (line_width / 2);
-			line2_y = mouseY - (line_height / 2);
+			// Redraw both lines in their new positions
+			for (int y = 0; y < line_height; y++) {
+				for (int x = 0; x < line_width; x++) {
+					int pixel_index1 = (line1_y + y) * screenw + (line1_x + x);
+					int pixel_index2 = (line2_y + y) * screenw + (line2_x + x);
+					if (pixel_index1 >= 0 && pixel_index1 < MapSize)
+						window_bmp_p[pixel_index1] = 0xffff0000;
+					if (pixel_index2 >= 0 && pixel_index2 < MapSize)
+						window_bmp_p[pixel_index2] = 0xffff0000;
+				}
+			}
 
-			MakeBitMap(hwnd, &whole_screen, bmi, &window_bmp_p, screenw, screenh);
-			SelectObject(hdc_comp, whole_screen);
 			InvalidateRect(hwnd, NULL, FALSE);
 		}
 		return 0;
@@ -249,6 +265,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_DESTROY:
+		DeleteObject(whole_screen);
+		DeleteDC(hdc_comp);
+		ReleaseDC(hwnd, hdc_main);
+		DeleteObject(dummy_bitmap);
 		PostQuitMessage(0);
 		return 0;
 	}
